@@ -1,7 +1,9 @@
 package main
 
 import (
+	"1mconnections/golang/host"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -15,39 +17,52 @@ const (
 
 func main() {
 
+	host := host.NewHostURL()
+
 	//get the number of clients to connect to the server
 	num := os.Args[1]
-	num_2 := os.Args[2]
 	fmt.Println("Number of clients:", num)
 	number_of_clients, err := strconv.Atoi(num)
-	if err != nil {
-		panic(err)
-	}
-	number_of_clients_2, err := strconv.Atoi(num_2)
 
 	if err != nil {
 		panic(err)
 	}
 
-	for j := 0; j < number_of_clients_2; j++ {
-		for i := 0; i < number_of_clients; i++ {
-			go create_client("localhost", strconv.Itoa(2000+j))
-			fmt.Println("Client", i+1, "has connected to the server")
+	// choose the correct
+
+	for i := 0; i < number_of_clients; i++ {
+
+		if i%2000 == 0 {
+			if err := host.UpgradeHostURL(); err != nil {
+				panic(err)
+			}
 		}
-	}
 
+		go create_client(host.String(), strconv.Itoa(2000+i%2000), 49152+i%2000)
+		fmt.Println("Connected to " + host.String() + ":" + strconv.Itoa(2000+i%8000) + " from " + host.String() + ":" + strconv.Itoa(49152+i%16000))
+
+	}
 	for {
 
 	}
 
 }
 
-func create_client(host string, port string) {
+func create_client(host string, remoteport string, localport int) {
 
-	// listen to incoming messages
-	conn, err := net.Dial(TYPE, host+":"+port)
+	// listen to incoming messages with
+	dialer := net.Dialer{
+		LocalAddr: &net.TCPAddr{
+			IP:   net.ParseIP(HOST),
+			Port: localport,
+		},
+	}
+	conn, err := dialer.Dial(TYPE, host+":"+remoteport)
+
 	if err != nil {
-		panic(err)
+		log.Println(err)
+
+		return
 	}
 	defer conn.Close()
 

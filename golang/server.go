@@ -1,6 +1,7 @@
 package main
 
 import (
+	"1mconnections/golang/host"
 	"fmt"
 	"net"
 	"os"
@@ -14,50 +15,10 @@ var (
 	failed    int64
 )
 
-type HostURL struct {
-	First_Chunk  int // 127
-	Second_Chunk int // 0-255
-	Third_Chunk  int // 0-255
-	Fourth_Chunk int // 0-255
-}
-
-func NewHostURL() *HostURL {
-	return &HostURL{
-		First_Chunk:  127,
-		Second_Chunk: 0,
-		Third_Chunk:  0,
-		Fourth_Chunk: 0,
-	}
-}
-
-func (h *HostURL) UpgradeHostURL() error {
-
-	if h.Fourth_Chunk < 255 {
-		h.Fourth_Chunk++
-		return nil
-	} else if h.Third_Chunk < 255 {
-		h.Third_Chunk++
-		h.Fourth_Chunk = 1
-		return nil
-	} else if h.Second_Chunk < 255 {
-		h.Second_Chunk++
-		h.Third_Chunk = 0
-		h.Fourth_Chunk = 0
-		return nil
-	} else {
-		return fmt.Errorf("HostURL is out of range")
-	}
-
-}
-
-func (h *HostURL) String() string {
-	return fmt.Sprintf("%d.%d.%d.%d", h.First_Chunk, h.Second_Chunk, h.Third_Chunk, h.Fourth_Chunk)
-}
-
 func main() {
 
 	// create hosturl object
-	hosturl := NewHostURL()
+	hosturl := host.NewHostURL()
 
 	// Listen for incoming connections.
 
@@ -76,16 +37,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	for n := 0; n < num_servers/8000; n++ {
-		if err := hosturl.UpgradeHostURL(); err != nil {
-			panic(err)
+
+	for n := 0; n < num_servers; n++ {
+		if n%2000 == 0 {
+			if err := hosturl.UpgradeHostURL(); err != nil {
+				panic(err)
+			}
 		}
-		j := 0
-		for j < 8000 {
-			addr := hosturl.String() + ":" + strconv.Itoa(2000+j)
-			go create_server(addr)
-			j++
-		}
+		addr := hosturl.String() + ":" + strconv.Itoa(2000+n%2000)
+		go create_server(addr)
+		fmt.Printf("Listening on host: %s, port: %s\n", hosturl.String(), strconv.Itoa(2000+n%2000))
 	}
 
 	for {
@@ -99,11 +60,11 @@ func create_server(addr string) {
 		return
 	}
 	defer l.Close()
-	host, port, err := net.SplitHostPort(l.Addr().String())
+	// host, port, err := net.SplitHostPort(l.Addr().String())
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Listening on host: %s, port: %s\n", host, port)
+	// fmt.Printf("Listening on host: %s, port: %s\n", host, port)
 
 	for {
 		// Listen for an incoming connection

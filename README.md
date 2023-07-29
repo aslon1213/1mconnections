@@ -1,2 +1,3 @@
 # 1mconnections
-achieving 1 million connection of client to server in one. physical machine
+
+achieving 1 million client to server connections in one physical machine
